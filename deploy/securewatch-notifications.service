@@ -1,0 +1,16 @@
+[Unit]
+Description=Deliver pending SecureWatch email notifications
+
+[Service]
+Type=oneshot
+User=securewatch
+Group=securewatch
+WorkingDirectory=/opt/securewatch
+EnvironmentFile=/opt/securewatch/.env.production
+ExecStart=/opt/securewatch/.venv/bin/python tools/process_notifications.py
+Nice=10
+NoNewPrivileges=true
+PrivateTmp=true
+ProtectSystem=strict
+ProtectHome=true
+ReadWritePaths=/opt/securewatch/data

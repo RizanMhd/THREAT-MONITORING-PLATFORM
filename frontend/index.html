@@ -1,0 +1,296 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="description" content="SecureWatch security incident management and threat monitoring platform">
+  <title>SecureWatch · Security Incident Management</title>
+  <link rel="stylesheet" href="/styles.css">
+</head>
+<body>
+  <section id="login-view" class="login-wrap">
+    <form id="login-form" class="login-card" autocomplete="on">
+      <h1>SecureWatch</h1>
+      <p class="subtitle">Security incident management and live threat monitoring</p>
+
+      <label for="username">Username
+        <input id="username" name="username" autocomplete="username" required maxlength="100">
+      </label>
+      <label for="password">Password
+        <input id="password" name="password" type="password" autocomplete="current-password" required maxlength="128">
+      </label>
+
+      <p id="login-error" class="error" role="alert"></p>
+      <button id="login-btn" class="btn" type="submit">Sign in</button>
+      <div id="login-hint" class="login-hint">Checking API connection…</div>
+    </form>
+  </section>
+
+  <div id="app-view" class="hidden">
+    <header>
+      <div class="brand">
+        SecureWatch
+        <small>Incident management &amp; threat monitoring</small>
+      </div>
+      <nav id="nav" aria-label="Main navigation"></nav>
+      <div class="header-right">
+        <span class="live"><span id="live-dot" class="dot"></span><span id="live-label">Live</span></span>
+        <span id="current-user" class="user-chip"></span>
+        <button id="logout" class="btn alt small" type="button">Sign out</button>
+      </div>
+    </header>
+
+    <main>
+      <section id="tab-dashboard" class="tab">
+        <div class="page-head">
+          <h2>Dashboard</h2>
+          <span id="last-updated" class="meta">Waiting for first refresh…</span>
+        </div>
+
+        <div id="stats" class="grid g4"></div>
+
+        <div class="grid g2 stack">
+          <div class="card">
+            <h3>Open incidents by severity</h3>
+            <div id="severity-bars"></div>
+          </div>
+          <div class="card">
+            <h3>Top source IPs</h3>
+            <div id="top-ips"></div>
+          </div>
+        </div>
+
+        <div class="grid g2 stack">
+          <div class="card">
+            <h3>Recent alerts</h3>
+            <div id="recent-incidents" class="scroll"></div>
+          </div>
+          <div class="card">
+            <h3>Latest events</h3>
+            <div id="recent-events" class="scroll"></div>
+          </div>
+        </div>
+
+        <div id="test-panel" class="card stack hidden">
+          <h3>Test the detection pipeline</h3>
+          <p class="muted">Generate real events through the ingestion API. This is admin-only and can be disabled with ENABLE_TEST_ENDPOINTS=false.</p>
+          <div class="row">
+            <select id="scenario" aria-label="Test scenario"></select>
+            <button id="run-scenario" class="btn" type="button">Run scenario</button>
+          </div>
+        </div>
+
+        <div class="card stack">
+          <h3>My notifications</h3>
+          <div id="notifications"></div>
+        </div>
+      </section>
+
+      <section id="tab-events" class="tab hidden">
+        <div class="page-head">
+          <h2>Log events</h2>
+          <span id="ev-count" class="meta"></span>
+        </div>
+
+        <div class="card">
+          <form id="event-filters" class="filters">
+            <label>IP address
+              <input id="ev-ip" placeholder="203.0.113.10" maxlength="45">
+            </label>
+            <label>User
+              <input id="ev-user" placeholder="alice" maxlength="100">
+            </label>
+            <label>Event type
+              <input id="ev-type" placeholder="login_failed" maxlength="50">
+            </label>
+            <label>Limit
+              <select id="ev-limit">
+                <option>100</option>
+                <option selected>200</option>
+                <option>500</option>
+                <option>1000</option>
+              </select>
+            </label>
+            <label class="checkbox"><input id="ev-hit" type="checkbox"> Detected events only</label>
+            <div class="row">
+              <button class="btn" type="submit">Apply filters</button>
+              <button id="ev-refresh" class="btn alt" type="button">Refresh</button>
+            </div>
+          </form>
+        </div>
+
+        <div class="card stack">
+          <div class="table-wrap">
+            <table>
+              <thead>
+                <tr><th>Time</th><th>Source</th><th>IP</th><th>User</th><th>Type</th><th>Country</th><th>Detail</th><th>Detected</th></tr>
+              </thead>
+              <tbody id="event-rows"></tbody>
+            </table>
+          </div>
+        </div>
+      </section>
+
+      <section id="tab-incidents" class="tab hidden">
+        <div class="page-head">
+          <h2>Incidents</h2>
+          <span class="meta">New → Assigned → Investigating → Resolved → Closed</span>
+        </div>
+
+        <div class="split">
+          <div class="card">
+            <form id="inc-filters" class="filters">
+              <label>Status
+                <select id="inc-status">
+                  <option value="">All statuses</option>
+                  <option value="NEW">New</option>
+                  <option value="ASSIGNED">Assigned</option>
+                  <option value="INVESTIGATING">Investigating</option>
+                  <option value="ESCALATED">Escalated</option>
+                  <option value="RESOLVED">Resolved</option>
+                  <option value="CLOSED">Closed</option>
+                </select>
+              </label>
+              <label>Severity
+                <select id="inc-severity">
+                  <option value="">All severities</option>
+                  <option value="CRITICAL">Critical</option>
+                  <option value="HIGH">High</option>
+                  <option value="MEDIUM">Medium</option>
+                  <option value="LOW">Low</option>
+                </select>
+              </label>
+              <div class="row">
+                <button id="inc-refresh" class="btn alt" type="button">Refresh</button>
+                <button id="export-csv" class="btn alt" type="button">Export CSV</button>
+              </div>
+            </form>
+
+            <div class="table-wrap stack">
+              <table>
+                <thead><tr><th>ID</th><th>Severity</th><th>Title</th><th>Status</th><th>Owner</th><th>Created</th></tr></thead>
+                <tbody id="incident-rows"></tbody>
+              </table>
+            </div>
+          </div>
+
+          <div id="incident-detail" class="card">
+            <p class="muted">Select an incident to investigate it.</p>
+          </div>
+        </div>
+      </section>
+
+      <section id="tab-rules" class="tab hidden">
+        <div class="page-head">
+          <h2>Detection rules</h2>
+          <span id="rules-note" class="meta"></span>
+        </div>
+        <div class="card">
+          <div class="table-wrap">
+            <table>
+              <thead><tr><th>On</th><th>Rule</th><th>Condition</th><th>Severity</th><th>Threshold / window</th></tr></thead>
+              <tbody id="rule-rows"></tbody>
+            </table>
+          </div>
+        </div>
+      </section>
+
+      <section id="tab-sources" class="tab hidden">
+        <div class="page-head">
+          <h2>Log sources</h2>
+          <span id="source-count" class="meta"></span>
+        </div>
+        <div id="source-form-wrap" class="card hidden">
+          <h3>Add a log source</h3>
+          <form id="source-form" class="form-grid">
+            <label>ID
+              <input id="src-id" placeholder="web-01" required maxlength="50">
+            </label>
+            <label>Name
+              <input id="src-name" placeholder="Web server 01" required maxlength="100">
+            </label>
+            <label>Type
+              <select id="src-type">
+                <option value="generic">Generic</option>
+                <option value="ssh">SSH / Linux</option>
+                <option value="windows">Windows</option>
+                <option value="web">Web server</option>
+                <option value="firewall">Firewall / IDS</option>
+                <option value="aws">AWS</option>
+                <option value="ids">IDS</option>
+                <option value="test">Test</option>
+              </select>
+            </label>
+            <button class="btn" type="submit">Create source</button>
+          </form>
+        </div>
+        <div class="card stack">
+          <div class="table-wrap">
+            <table>
+              <thead><tr><th>ID</th><th>Name</th><th>Type</th><th>Active</th><th>Created</th><th>Actions</th></tr></thead>
+              <tbody id="source-rows"></tbody>
+            </table>
+          </div>
+        </div>
+      </section>
+
+      <section id="tab-users" class="tab hidden">
+        <div class="page-head">
+          <h2>Users and roles</h2>
+          <span class="meta">Administrator only</span>
+        </div>
+        <div id="user-form-wrap" class="card hidden">
+          <h3>Create a user</h3>
+          <form id="user-form" class="form-grid">
+            <label>Username
+              <input id="usr-username" placeholder="jane.analyst" required maxlength="100">
+            </label>
+            <label>Email
+              <input id="usr-email" type="email" placeholder="jane@example.com" maxlength="255">
+            </label>
+            <label>Password
+              <input id="usr-password" type="password" required minlength="8" maxlength="128" autocomplete="new-password">
+            </label>
+            <label>Role
+              <select id="usr-role">
+                <option value="SECURITY_ANALYST">Analyst</option>
+                <option value="SECURITY_MANAGER">Manager</option>
+                <option value="VIEWER">Viewer</option>
+                <option value="SYSTEM_ADMIN">Administrator</option>
+              </select>
+            </label>
+            <button class="btn" type="submit">Create user</button>
+          </form>
+        </div>
+        <div class="card stack">
+          <div class="table-wrap">
+            <table>
+              <thead><tr><th>Username</th><th>Email</th><th>Role</th><th>Active</th><th>Created</th><th>Actions</th></tr></thead>
+              <tbody id="user-rows"></tbody>
+            </table>
+          </div>
+        </div>
+      </section>
+
+      <section id="tab-audit" class="tab hidden">
+        <div class="page-head">
+          <h2>Audit trail</h2>
+          <span class="meta">Administrator only</span>
+        </div>
+        <div class="card">
+          <div class="table-wrap">
+            <table>
+              <thead><tr><th>Time</th><th>User</th><th>Action</th><th>IP address</th></tr></thead>
+              <tbody id="audit-rows"></tbody>
+            </table>
+          </div>
+        </div>
+      </section>
+    </main>
+  </div>
+
+  <div id="toasts" aria-live="polite"></div>
+  <noscript>SecureWatch requires JavaScript to run.</noscript>
+  <script src="/app.js" defer></script>
+</body>
+</html>

@@ -1,0 +1,22 @@
+services:
+  securewatch:
+    build:
+      context: .
+      dockerfile: backend/Dockerfile
+    image: securewatch:latest
+    init: true
+    restart: unless-stopped
+    stop_grace_period: 30s
+    ports:
+      - "${SW_BIND:-127.0.0.1}:8000:8000"
+    env_file:
+      - .env
+    volumes:
+      - swdata:/data
+      - swbackups:/srv/backups
+    security_opt:
+      - no-new-privileges:true
+
+volumes:
+  swdata:
+  swbackups:

@@ -1,0 +1,54 @@
+services:
+  securewatch:
+    build:
+      context: .
+      dockerfile: backend/Dockerfile
+    image: securewatch:latest
+    init: true
+    restart: unless-stopped
+    stop_grace_period: 30s
+    env_file:
+      - .env.production
+    command:
+      - uvicorn
+      - app.main:app
+      - --app-dir
+      - /srv/backend
+      - --host
+      - 0.0.0.0
+      - --port
+      - "8000"
+      - --proxy-headers
+      - --forwarded-allow-ips=*
+    ports:
+      - "127.0.0.1:8000:8000"
+    volumes:
+      - swdata:/data
+      - swbackups:/srv/backups
+    depends_on:
+      db:
+        condition: service_healthy
+    security_opt:
+      - no-new-privileges:true
+
+  db:
+    image: postgres:16-alpine
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: ${POSTGRES_DB}
+      POSTGRES_USER: ${POSTGRES_USER}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER} -d ${POSTGRES_DB}"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+    security_opt:
+      - no-new-privileges:true
+
+volumes:
+  swdata:
+  swbackups:
+  pgdata:

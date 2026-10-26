@@ -1,0 +1,17 @@
+.venv/
+.git/
+.pytest_cache/
+__pycache__/
+**/__pycache__/
+**/*.pyc
+.env
+.env.*
+!.env.example
+!.env.production.example
+data/
+backups/
+server*.log
+backend/tests/
+deploy/
+docker-compose*.yml
+README.md
